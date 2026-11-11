@@ -106,20 +106,42 @@ void main(){
     vec4 d=texture(uDye,clamp(q,vec2(.002),vec2(.998)));
     float n=fbm(q*vec2(16.,21.)+vec2(z*9.-t*.65,z*2.+t*.8));
     float n2=noise(q*vec2(42.,32.)+vec2(t*.72,z*19.));
-    float heat=clamp(d.r*(.69+.51*n)+.055*(n-.5),0.,1.);
-    float flame=pow(smoothstep(.085,.76,heat),1.2)*(1.-smoothstep(.72,1.,uv.y));
-    float ash=clamp((d.g*.92+n*.12-.07)*uSmoke,0.,1.);
-    float smoke=smoothstep(.09,.65,ash)*(.36+.64*smoothstep(.25,.75,uv.y));
-    smoke*=1.-flame*.67;
+    // High-fidelity hybrid: the simulated temperature/velocity drive a stylized
+    // animated flame envelope, so its silhouette survives low-res advection.
+    float height=max(0.,q.y-.20);
+    float nFlow=fbm(vec2(q.x*8.7+z*3.1-t*.24,q.y*12.6-t*.71));
+    float sway=(sin(q.y*11.5-t*2.05+nFlow*3.5)*.058
+             +sin(q.y*23.4+t*1.23+uSeed*2.)*.024)*smoothstep(.15,.66,q.y);
+    float center=.5+sway;
+    float branch=sin(q.y*29.-t*3.3+z*5.2+6.*nFlow)*.039*smoothstep(.24,.55,q.y);
+    float width=(.071+.044*smoothstep(.18,.36,q.y))*(1.-smoothstep(.40,.88,q.y))+.008;
+    float streak=abs(q.x-center-branch)/max(width,.007);
+    float edge=1.-smoothstep(.48,1.16,streak);
+    float flameBody=edge*smoothstep(.16,.26,q.y)*(1.-smoothstep(.65,.84,q.y));
+    float mottling=.68+.46*n+.18*sin(q.y*43.+t*2.3+n2*7.+z*6.);
+    float heat=clamp(max(d.r*.40,flameBody*mottling*.83)*(1.-smoothstep(.85,.97,q.y)),0.,1.);
+    float flame=pow(smoothstep(.10,.70,heat),1.05);
+    // Broader smoke ribbons behind the flame. Density keeps the simulation
+    // contribution, while noise creates curled wisps independent of grid size.
+    float smokeSway=sin(q.y*8.6-t*.84+nFlow*3.5)*.105+sin(q.y*17.7+t*.53)*.041;
+    float sCenter=.5+smokeSway;
+    float sWidth=.092+.086*smoothstep(.32,.88,q.y);
+    float sDist=abs(q.x-sCenter)/sWidth;
+    float wisp=1.-smoothstep(.30,.98,sDist);
+    float curls=fbm(vec2(q.x*12.+z*2.7+t*.23,q.y*18.-t*.88));
+    float strands=smoothstep(.26,.66,curls+.22*sin(q.y*31.-t*1.7+q.x*24.));
+    float smokeShape=wisp*strands*smoothstep(.27,.58,q.y)*(1.-smoothstep(.88,1.04,q.y));
+    float smoke=clamp(max(d.g*.50,smokeShape*.85)*uSmoke,0.,1.);
+    smoke*=1.-flame*.72;
     float core=smoothstep(.51,.96,heat);
     float rim=clamp(1.-core*.26,0.,1.);
     vec3 fire=mix(vec3(.88,.09,.012),vec3(1.,.54,.048),smoothstep(.14,.68,heat));
     fire=mix(fire,vec3(1.,.94,.57),pow(core,1.45));
     float shade=.67+.33*n2+z*.14;
-    vec3 smokeCol=mix(vec3(.095,.082,.09),vec3(.37,.26,.21),.43+.56*n);
+    vec3 smokeCol=mix(vec3(.19,.18,.20),vec3(.48,.39,.34),.33+.60*n);
     float smokeShade=(.62+.35*n2)*(.8+max(0.,z)*.32);
-    float fa=flame*.54/uVolumeSteps*7.0;
-    float sa=smoke*.27/uVolumeSteps*7.0;
+    float fa=flame*.64/uVolumeSteps*7.0;
+    float sa=smoke*.40/uVolumeSteps*7.0;
     float layerA=clamp(fa+sa,0.,.92);
     vec3 layer=(fire*fa*shade*rim+smokeCol*sa*smokeShade)/(layerA+.0001);
     float contrib=(1.-accumA)*layerA;
@@ -166,10 +188,10 @@ class FluidEngine{constructor(n,copyCount){this.n=n;this.programs={};for(let nam
  update(dt,t){for(let s of this.sims){this.draw(params.look==='fidelity'?'velocityHi':'velocity',s.velocity.back,s,dt,t);swap(s.velocity);if(params.look==='fidelity'&&params.swirl>0){this.draw('curl',s.curl,s,dt,t);this.draw('confinement',s.velocity.back,s,dt,t);swap(s.velocity)}if(params.iterations){this.draw('divergence',s.divergence,s,dt,t); // reset pressure each step via inexpensive clear
   for(let target of [s.pressure.front,s.pressure.back]){gl.bindFramebuffer(gl.FRAMEBUFFER,target.fb);gl.clearColor(.5,0,0,1);gl.clear(gl.COLOR_BUFFER_BIT)}
   for(let i=0;i<params.iterations;i++){this.draw('pressure',s.pressure.back,s,dt,t);swap(s.pressure)}this.draw('project',s.velocity.back,s,dt,t);swap(s.velocity)}this.draw(params.look==='fidelity'?'dyeHi':'dye',s.dye.back,s,dt,t);swap(s.dye)}touchImpulse.strength*=.62}
- render(t){gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);if(params.mode==='baseline'){return}gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);const count=params.emitters,asp=canvas.width/canvas.height;const cols=Math.ceil(Math.sqrt(count*asp)),rows=Math.ceil(count/cols);for(let i=0;i<count;i++){const col=i%cols,row=Math.floor(i/cols),cellW=2/cols,cellH=2/rows;const centerX=-1+cellW*(col+.5),centerY=1-cellH*(row+.5);const tileW=Math.min(cellW*.96,cellH*.94*.95),tileH=Math.min(cellH*.94,cellW/.85);const s=this.sims[i%this.sims.length];this.draw(params.look==='fidelity'?'displayHi':'display',null,s,0,t,{rect:[centerX,centerY,tileW*.5,tileH*.5],procedural:params.mode==='procedural'?1:0,brightness:.92+((i*17)%7)*.025})}gl.disable(gl.BLEND)} }
+ render(t){gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);if(params.mode==='baseline'){return}gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);const count=params.emitters,asp=canvas.width/canvas.height;const cols=Math.max(1,Math.round(Math.sqrt(count*asp))),rows=Math.ceil(count/cols);for(let i=0;i<count;i++){const col=i%cols,row=Math.floor(i/cols),cellW=2/cols,cellH=2/rows;const centerX=-1+cellW*(col+.5),centerY=1-cellH*(row+.5);const tileW=Math.min(cellW*.96,cellH*.94*.95),tileH=Math.min(cellH*.94,cellW/.85);const s=this.sims[i%this.sims.length];this.draw(params.look==='fidelity'?'displayHi':'display',null,s,0,t,{rect:[centerX,centerY,tileW*.5,tileH*.5],procedural:params.mode==='procedural'?1:0,brightness:.92+((i*17)%7)*.025})}gl.disable(gl.BLEND)} }
 // Canvas2D honest fallback for browser lacking WebGL2.
 const ctx2d=gl?null:canvas.getContext('2d',{alpha:true});
-function drawFallback(t){if(!ctx2d)return;const w=canvas.width,h=canvas.height;ctx2d.clearRect(0,0,w,h);if(params.mode==='baseline')return;const cols=Math.ceil(Math.sqrt(params.emitters*w/h)),rows=Math.ceil(params.emitters/cols);for(let i=0;i<params.emitters;i++){let cx=(i%cols+.5)*w/cols, cy=(Math.floor(i/cols)+.5)*h/rows;let scale=Math.min(w/cols,h/rows);ctx2d.fillStyle='#403020';ctx2d.fillRect(cx-scale*.016,cy+scale*.12,scale*.032,scale*.30);let f=scale*(.16+.018*Math.sin(t*9+i));const g=ctx2d.createRadialGradient(cx,cy+scale*.10,1,cx,cy-scale*.07,f*1.7);g.addColorStop(0,'rgba(255,255,230,.98)');g.addColorStop(.24,'rgba(255,193,42,.83)');g.addColorStop(.58,'rgba(251,88,18,.65)');g.addColorStop(1,'rgba(250,100,15,0)');ctx2d.fillStyle=g;ctx2d.beginPath();ctx2d.ellipse(cx+Math.sin(t*2+i)*scale*.02,cy-scale*.055,f,f*1.75,Math.sin(t+i)*.2,0,Math.PI*2);ctx2d.fill()}}
+function drawFallback(t){if(!ctx2d)return;const w=canvas.width,h=canvas.height;ctx2d.clearRect(0,0,w,h);if(params.mode==='baseline')return;const cols=Math.max(1,Math.round(Math.sqrt(params.emitters*w/h))),rows=Math.ceil(params.emitters/cols);for(let i=0;i<params.emitters;i++){let cx=(i%cols+.5)*w/cols, cy=(Math.floor(i/cols)+.5)*h/rows;let scale=Math.min(w/cols,h/rows);ctx2d.fillStyle='#403020';ctx2d.fillRect(cx-scale*.016,cy+scale*.12,scale*.032,scale*.30);let f=scale*(.16+.018*Math.sin(t*9+i));const g=ctx2d.createRadialGradient(cx,cy+scale*.10,1,cx,cy-scale*.07,f*1.7);g.addColorStop(0,'rgba(255,255,230,.98)');g.addColorStop(.24,'rgba(255,193,42,.83)');g.addColorStop(.58,'rgba(251,88,18,.65)');g.addColorStop(1,'rgba(250,100,15,0)');ctx2d.fillStyle=g;ctx2d.beginPath();ctx2d.ellipse(cx+Math.sin(t*2+i)*scale*.02,cy-scale*.055,f,f*1.75,Math.sin(t+i)*.2,0,Math.PI*2);ctx2d.fill()}}
 function resize(){const r=stage.getBoundingClientRect();let scale=params.scale;const dpr=Math.min(window.devicePixelRatio||1,2);const w=Math.max(64,Math.round(r.width*dpr*scale)),h=Math.max(64,Math.round(r.height*dpr*scale));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}device.canvas=w+' × '+h;initDevice()}
 function restart(){try{if(gl){engine?.dispose();engine=new FluidEngine(params.res,params.copies)}samples.length=0;cpuSamples.length=0;samplesTime.length=0;accum=0;simTime=0;last=0;resize();updateStatus(gl?'实时 GPU 模拟已重置':'此设备不支持 WebGL2，当前为 Canvas2D 动画降级（非流体模拟）')}catch(err){errorMessage=String(err);updateStatus('WebGL 初始化失败：'+errorMessage);$('backend-text').textContent='WebGL 出错';engine=null}}
 const selectors={copies:'sim-copies',res:'resolution',hz:'hz',iterations:'iterations',scale:'render-scale',mode:'visual-mode'};
