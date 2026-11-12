@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#10110f"><title>EMBER / 手機火焰比較</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+<header><div><p class="eyebrow">EMBER / MOBILE FIELD TEST · 01</p><h1>同一團火，兩種成本。</h1><p class="intro">切換動畫來源，看看你的手機能承受多少火焰。</p></div><span class="edition">Baked ↔ Live</span></header>
+<section class="workspace">
+<div class="visual"><div class="source-controls"><div class="section-label"><b>01</b> 動畫來源</div>
+<div class="mode-switch" role="group" aria-label="動畫來源"><button id="baked" aria-pressed="true" disabled><strong>烘焙動畫</strong><small>播放預先計算的序列</small></button><button id="live" aria-pressed="false" disabled><strong>共用即時模擬</strong><small>所有火焰共用 1 套流體</small></button></div>
+<p id="modeNote" class="hint">兩種模式使用相同火焰來源、著色、尺寸與更新頻率。</p>
+</div><div class="stage" id="stage"><canvas id="canvas" aria-label="火焰效能測試畫面"></canvas><div class="stage-top"><span id="modeTag">準備素材中</span><span id="countTag">04 FLAMES</span></div><div class="stage-bottom"><span id="sceneTag">均勻分佈 · 固定尺寸</span><button id="pause" aria-label="暫停動畫">暫停</button></div><div id="error" role="alert" hidden></div></div>
+<div class="metrics"><div><small>畫面更新</small><strong id="fps">—</strong><span>FPS</span></div><div><small>較慢的幀 · P95</small><strong id="p95">—</strong><span>ms</span></div><div><small>GPU · 平均</small><strong id="gpu">—</strong><span id="gpuUnit">ms / 幀</span></div></div>
+<p class="caption" id="detail">正在載入預烘焙序列；首次載入不計入測試。</p></div>
+<aside>
+<div class="section-label"><b>02</b> 畫面負載</div>
+<label for="count">火焰數量 <output id="countValue">4</output></label><input id="count" type="range" min="1" max="64" step="1" value="4"><div class="presets" id="presets"><button data-count="1">1</button><button data-count="4">4</button><button data-count="16">16</button><button data-count="32">32</button><button data-count="64">64</button></div>
+<div class="fields"><div><label for="layout">排列方式</label><select id="layout"><option value="spread">均勻分佈</option><option value="overlap">密集重疊</option></select></div><div><label for="size">每團火尺寸</label><select id="size"><option value="120">小 · 120 px</option><option value="200" selected>中 · 200 px</option><option value="280">大 · 280 px</option></select></div><div><label for="scale">繪製解析度</label><select id="scale"><option value="0.5">0.5× · 省電</option><option value="1" selected>1× · 標準</option><option value="1.5">1.5× · 精細</option></select></div><div><label for="glow">柔光</label><select id="glow"><option value="off">關閉 · 看火舌</option><option value="on" selected>開啟 · 含後製成本</option></select></div></div>
+<div class="section-label"><b>03</b> 留下實機結果</div>
+<label for="duration">每段記錄長度</label><select id="duration"><option value="20">20 秒 · 快速比較</option><option value="60">60 秒 · 穩定性</option><option value="180">180 秒 · 持續負載</option></select>
+<button id="compare" class="primary" disabled>比較兩種模式 · A/B/B/A</button><div class="actions"><button id="record" disabled>只記錄目前模式</button><button id="stop" disabled>停止記錄</button></div>
+<p class="hint">每段先暖機 5 秒。A/B/B/A 交錯順序可減少先後順序偏差；測試時請保持頁面前台。</p><p id="status" role="status" aria-live="polite">等待素材。</p>
+</aside></section>
+<section class="results"><div class="results-head"><div><p class="eyebrow">YOUR DEVICE / YOUR EVIDENCE</p><h2>這支手機的結果</h2></div><button id="export" disabled>下載 JSON 報告</button></div><div class="table-scroll"><table><thead><tr><th>來源 / 數量</th><th>FPS</th><th>P95</th><th>&gt;33.3ms</th><th>GPU 平均</th><th>模擬速度</th></tr></thead><tbody id="rows"><tr><td colspan="6">尚未記錄。先選數量，再開始比較。</td></tr></tbody></table></div><p class="hint">模擬速度 100% 表示時間正常前進；低於 100% 代表即時流體正在放慢，不能只看 FPS。</p></section>
+<details><summary>這個比較測了什麼？</summary><div class="notes"><p>即時模式：64×128 速度網格、128×256 狀態、20 次壓力迭代、30 Hz 更新。無論顯示幾團火，都只有一套流體求解。</p><p>烘焙模式：同一套流體預先輸出 30 FPS 的狀態序列，再用相同材質上色；沒有背景流體計算。循環接縫使用 0.5 秒混合，會有些許形態變化。所有火焰同步，避免把動畫錯相造成的差異混進比較。</p><p>兩種模式共用相同渲染路徑與柔光。不是原 v3 高畫質檔，也不是完整遊戲效能。透明重疊、顯示面積與畫布解析度都影響結果。GPU 計時不受支援時顯示「不支援」，不以 CPU 時間代替。</p><p id="memory">烘焙圖集約占 16 MiB GPU 紋理空間；這不是網頁總記憶體。切換時兩種資源會保留以免重新下載／編譯，但烘焙模式完全停止流體更新。</p><p>報告只在本機產生，不會自動上傳。若裝置不支援浮點渲染，可單獨測試烘焙模式。分頁切至背景、調整視窗或變更設定會中止當段，避免把不完整資料當成成績。</p><p><a href="README.md">實作、來源與測試邊界</a></p></div></details>
+<footer>EMBER / 一次看畫質，一次看成本。 <span>實機測量，不預設答案。</span></footer>
+</main><script type="module" src="app.js"></script></body></html>

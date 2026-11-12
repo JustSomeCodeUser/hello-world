@@ -1,0 +1,29 @@
+{
+  "image": "flame-atlas.png",
+  "frames": 105,
+  "fps": 30,
+  "frameWidth": 128,
+  "frameHeight": 256,
+  "atlasWidth": 2048,
+  "atlasHeight": 2048,
+  "columns": 16,
+  "encoding": "opaque RGB: temperature/2, soot, gas/2; bottom-up rows within each tile; no color conversion",
+  "seamBlendSeconds": 0.5,
+  "warmupSeconds": 6,
+  "sourceCommit": "07331ce87a1296ae92196d1a631c60a60dfa8822",
+  "simulation": {
+    "velocity": [
+      64,
+      128
+    ],
+    "state": [
+      128,
+      256
+    ],
+    "pressureIterations": 20,
+    "dt": 0.03333333333333333,
+    "seed": 21
+  },
+  "sha256": "1266aa4a53320e37edd6885372aa52dabcd4314aae71ae55d531be2157d2b729",
+  "downloadBytes": 2653137
+}
