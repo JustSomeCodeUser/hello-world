@@ -104,7 +104,7 @@ export function settingsKey(settings, canvas) {
 }
 export function assessBatch(batch, samples, { liveAvailable = true } = {}) {
   const base = { rulesVersion: RULES.version, batchId: batch?.id ?? null, recommendation: null, modes: {}, reasons: [], visualQuality: batch?.visualQuality || 'pending', scope: batch ? { settings: batch.settings, canvas: batch.canvas, secondsPerSegment: batch.duration } : null };
-  if (!batch) return { ...base, status: 'waiting', title: '測完後，自動告訴你怎麼選', detail: '選好火焰數量與畫質，按「比較兩種模式」。', next: '建議先用 4 個火焰、200 px、1×、柔光開啟。' };
+  if (!batch) return { ...base, status: 'waiting', title: '測完後，自動告訴你怎麼選', detail: '選好畫質，按「一鍵測數量上限」；或只比較目前數量。', next: '建議先用 4 個火焰、200 px、1×、柔光開啟。' };
   const selected = samples.filter(s => s.batchId === batch.id);
   for (const mode of ['baked', 'live']) {
     const items = selected.filter(s => s.mode === mode).map(s => ({ sample: s, assessment: assessSample(s) }));
@@ -131,7 +131,7 @@ export function assessBatch(batch, samples, { liveAvailable = true } = {}) {
   const compatible = selected.every(s => settingsKey(s.settings, s.canvas) === settingsKey(batch.settings, batch.canvas) && s.secondsTarget === batch.duration);
   const complete = batch.status === 'complete' && selected.length === batch.sequence.length && selected.every((s, i) => s.mode === batch.sequence[i] && assessSample(s).valid);
   if (!compatible || !complete) return { ...base, status: 'insufficient', title: batch.status === 'running' ? '測試進行中，尚未做最終推薦' : '資料不足，暫不推薦模式', detail: !compatible ? '設定或畫布尺寸不同，不能合併比較。' : '須完成同一次、相同設定的所有測試段落。中止段不算通過。', next: '保持頁面前台，完成一次 A/B/B/A 比較。' };
-  if (batch.kind !== 'compare' && liveAvailable) return { ...base, status: 'partial', title: '單一模式已評分，還不能比較優劣', detail: '上方顯示這個模式的達標情況；尚未測試另一種模式。', next: '按「比較兩種模式」，完成 A/B/B/A。' };
+  if (batch.kind !== 'compare' && liveAvailable) return { ...base, status: 'partial', title: '單一模式已評分，還不能比較優劣', detail: '上方顯示這個模式的達標情況；尚未測試另一種模式。', next: '按「比較目前數量」，完成 A/B/B/A。' };
   if (batch.kind === 'compare' && (!base.modes.baked || !base.modes.live || batch.sequence.length !== 4 || batch.sequence.filter(m => m === 'baked').length !== 2 || batch.sequence.filter(m => m === 'live').length !== 2)) return { ...base, status: 'insufficient', title: '缺少完整的雙模式對照', detail: '兩種模式各需要兩段有效記錄。', next: '重新完成 A/B/B/A 比較。' };
 
   const accepted = mode => base.visualQuality === 'pending' || base.visualQuality === 'both' || base.visualQuality === mode;

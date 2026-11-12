@@ -38,6 +38,7 @@ Order balancing does not eliminate thermal throttling. Compare like-for-like set
 - `app.js`: lifecycle, mode selection, benchmarks, JSON export.
 - `assessment.js`: pure screening and recommendation logic; `assessment-ui.js`: accessible result cards.
 - `assessment.test.mjs`: boundary, incomplete-data, slowdown, visual-veto and recommendation tests (`node --test assessment.test.mjs`). Synthetic fixtures are for logic verification, not phone performance claims.
+- `sweep.js`, `sweep.test.mjs`: automatic count plans, capacity selection, consistency checks and tests (`node --test assessment.test.mjs sweep.test.mjs`).
 - `fluid.js`: adapted EMBER simulator, allocated only on first live use.
 - `graphics.js`: common appearance shader, instanced display, shared optional glow, baking helper.
 - `flame-atlas.png`, `atlas.json`: baked state sequence and provenance/encoding manifest.
@@ -63,3 +64,15 @@ Each comparison is an explicit batch. All four planned segments must finish, wit
 Eligible higher tiers take priority. At equal tiers, decorative flames default to baked to avoid live solving; that is a usage recommendation, not measured battery savings. A measured GPU advantage can select either mode with reliable GPU timing (>=80% coverage, no disjoint flag), comparable display cadence (all segment FPS within 5%), and both preferred-mode GPU means at least 20% below both other-mode means, with a mean difference >=0.2ms. Without reliable GPU timing, the frame-time criteria still work.
 
 Visual quality is not machine-graded. An optional visual choice can veto a recommendation. Pending quality is marked explicitly. Both rejected, both failing, unstable, mismatched or incomplete cases never produce a false all-clear. Reports export the rule version, per-segment grades, per-batch recommendation, reasons, scope and visual choice.
+
+## One-click count sweep (report schema v3)
+
+The count sweep preserves the selected flame size, layout, render scale, glow and canvas dimensions, and automatically tests 4, 16, 32 and 64 flames in that order. Each count runs a complete A/B/B/A sequence starting with the selected mode. Each segment uses 5 seconds warmup and a fixed 20-second measurement, independently of the single-count duration selector. Sixteen segments take about 6 minutes 40 seconds. If float rendering is unavailable, each count instead runs two baked-only segments (about 3 minutes 20 seconds); live capacity is explicitly unsupported.
+
+Controls remain locked throughout the whole sweep. Stop, pause, backgrounding, resize or a runtime error interrupts the batch. Existing completed samples remain exportable, but an incomplete sweep never claims a capacity or overall recommendation. All planned segments must finish with the exact expected counts/modes/order, duration, canvas and common quality settings.
+
+Each count is graded by the existing batch rules. The summary lists per-mode highest tested counts for the 60 FPS and >=30 FPS tiers separately. Overall selection prioritizes the 60 FPS tier, then capacity in that tier, then the existing same-count GPU/usage tie-breaker. Only if there is no acceptable 60 FPS capacity does it select the 30 FPS tier. Visual-quality choices remain a veto. Lack of GPU timing does not prevent frame-time based grading.
+
+A lower count failing and a higher count passing at the same tier is a non-monotonic result. That mode/tier's trusted capacity is withheld as inconsistent; observed individual passes remain visible. No interpolation is made between the tested counts. 64 passing means 64 is the highest tested passing count, not that the device's physical limit is 64. If all four fail, fewer than 4 remain untested.
+
+All sweep recommendations are preliminary. Six-plus minutes across different loads is not 180 seconds of sustained validation at the chosen configuration. Use the recommended count and mode in a separate 180-second-per-segment test before game integration. Reports include the exact plan, four per-count assessments, both modes' tier capacities and the recommended mode/count/tier.

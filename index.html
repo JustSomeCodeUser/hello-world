@@ -14,21 +14,23 @@
 <label for="count">火焰數量 <output id="countValue">4</output></label><input id="count" type="range" min="1" max="64" step="1" value="4"><div class="presets" id="presets"><button data-count="1">1</button><button data-count="4">4</button><button data-count="16">16</button><button data-count="32">32</button><button data-count="64">64</button></div>
 <div class="fields"><div><label for="layout">排列方式</label><select id="layout"><option value="spread">均勻分佈</option><option value="overlap">密集重疊</option></select></div><div><label for="size">每團火尺寸</label><select id="size"><option value="120">小 · 120 px</option><option value="200" selected>中 · 200 px</option><option value="280">大 · 280 px</option></select></div><div><label for="scale">繪製解析度</label><select id="scale"><option value="0.5">0.5× · 省電</option><option value="1" selected>1× · 標準</option><option value="1.5">1.5× · 精細</option></select></div><div><label for="glow">柔光</label><select id="glow"><option value="off">關閉 · 看火舌</option><option value="on" selected>開啟 · 含後製成本</option></select></div></div>
 <div class="section-label"><b>03</b> 留下實機結果</div>
-<label for="duration">每段記錄長度</label><select id="duration"><option value="20">20 秒 · 快速比較</option><option value="60">60 秒 · 穩定性</option><option value="180">180 秒 · 持續負載</option></select>
-<button id="compare" class="primary" disabled>比較兩種模式 · A/B/B/A</button><div class="actions"><button id="record" disabled>只記錄目前模式</button><button id="stop" disabled>停止記錄</button></div>
+<button id="sweep" class="primary sweep-start" disabled>一鍵測數量上限 · 4 → 16 → 32 → 64</button>
+<p class="hint"><span id="sweepTime">每段固定 20 秒，含暖機共約 6 分 40 秒。</span>保留目前尺寸、解析度、柔光與排列；只自動增加數量。最後列出兩種模式的 60／30 FPS 檔最高通過數量。</p>
+<label for="duration">單一數量測試 · 每段記錄長度</label><select id="duration"><option value="20">20 秒 · 快速比較</option><option value="60">60 秒 · 穩定性</option><option value="180">180 秒 · 持續負載</option></select>
+<button id="compare" class="primary secondary-test" disabled>比較目前數量 · A/B/B/A</button><div class="actions"><button id="record" disabled>只記錄目前模式</button><button id="stop" disabled>停止記錄</button></div>
 <p class="hint">每段先暖機 5 秒。A/B/B/A 交錯順序可減少先後順序偏差；測試時請保持頁面前台。</p><p id="status" role="status" aria-live="polite">等待素材。</p>
 </aside></section>
 <section class="results" id="resultsSection"><div class="results-head"><div><p class="eyebrow">YOUR DEVICE / YOUR EVIDENCE</p><h2>這支手機的結果</h2></div><button id="export" disabled>下載 JSON 報告</button></div><div id="assessment" class="assessment-card" data-status="waiting" aria-live="polite" aria-atomic="true">
 <p class="eyebrow">AUTOMATIC SCREENING / 自動判定</p><h3 id="verdictTitle">測完後，自動告訴你怎麼選</h3>
 <p id="verdictScope">只判斷本次實測設定，不推算其他火焰數量或整台手機的能力。</p>
-<div id="modeVerdicts"></div><p id="verdictDetail">選好火焰數量與畫質，按「比較兩種模式」。</p>
+<div id="modeVerdicts"></div><p id="verdictDetail">選好畫質，按「一鍵測數量上限」；或只比較目前數量。</p>
 <ul id="verdictNotes"></ul><p class="verdict-next" id="verdictNext">建議先用 4 個火焰、200 px、1×、柔光開啟。</p>
 </div>
 <label for="visualQuality">畫質確認（可選，會更新推薦）</label><select id="visualQuality" disabled><option value="pending">尚未確認 · 先看性能建議</option><option value="both">兩種畫質都能接受</option><option value="baked">只接受烘焙動畫的畫質</option><option value="live">只接受即時模擬的畫質</option><option value="neither">兩種畫質都不滿意</option></select>
 <p class="hint">頁面能量測性能，不能替你判斷火舌是否自然或循環接縫是否可接受。只測一種模式，或中途停止，不會冒充完整 A/B 結論。</p>
 <div class="table-scroll"><table><thead><tr><th>來源 / 數量</th><th>FPS</th><th>P95</th><th>&gt;33.3ms</th><th>GPU 平均</th><th>模擬速度</th><th>本段判定</th></tr></thead><tbody id="rows"><tr><td colspan="7">尚未記錄。先選數量，再開始比較。</td></tr></tbody></table></div><p class="hint">模擬速度 100% 表示時間正常前進；低於 100% 代表即時流體正在放慢，不能只看 FPS。</p></section>
 <details class="standards"><summary>達標標準與推薦依據</summary><div class="notes">
-<p>以下是這次火焰實驗的初篩門檻，不是手機認證，也不代表完整遊戲已達標。先固定 200 px、1×、柔光開啟、均勻分佈，再依序測 4、16、32 個。</p>
+<p>一鍵掃描依序測 4、16、32、64，每個數量都跑 A/B/B/A，每段 20 秒加 5 秒暖機。若不支援即時模式，各數量只測兩次烘焙。未完成不產生上限；出現低數量未通過、高數量卻通過時，相關檔位標記結果不一致，不採信該上限。推薦優先 60 FPS 檔，再比較最高實測數量；無可用的 60 FPS 檔才考慮 30 FPS。通過 64 表示至少已測至 64，不推斷硬體極限。</p><p>以下是這次火焰實驗的初篩門檻，不是手機認證，也不代表完整遊戲已達標。先固定 200 px、1×、柔光開啟、均勻分佈，再依序測 4、16、32 個。</p>
 <div class="table-scroll"><table><thead><tr><th>項目</th><th>60 FPS 檔</th><th>30 FPS 檔候選</th></tr></thead><tbody>
 <tr><td>平均 FPS</td><td>≥58</td><td>≥29</td></tr><tr><td>P95 幀間隔</td><td>≤20 ms</td><td>≤40 ms</td></tr><tr><td>超過 33.3 ms 的幀</td><td>&lt;1%</td><td>不作此檔門檻</td></tr><tr><td>即時模擬速度</td><td>≥95%</td><td>≥95%</td></tr></tbody></table></div>
 <p>同一模式的兩段都要通過，取較差檔位。20／60 秒只屬快速初篩。180 秒長測另外要求前 1/3、後 1/3 仍達標；後段或後一次同模式記錄的 FPS 下降超過 10%，會標記「持續性未通過」。10% 是本頁的掉速提醒線，不是發熱診斷。</p>
