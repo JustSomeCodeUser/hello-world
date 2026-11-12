@@ -18,7 +18,23 @@
 <button id="compare" class="primary" disabled>比較兩種模式 · A/B/B/A</button><div class="actions"><button id="record" disabled>只記錄目前模式</button><button id="stop" disabled>停止記錄</button></div>
 <p class="hint">每段先暖機 5 秒。A/B/B/A 交錯順序可減少先後順序偏差；測試時請保持頁面前台。</p><p id="status" role="status" aria-live="polite">等待素材。</p>
 </aside></section>
-<section class="results"><div class="results-head"><div><p class="eyebrow">YOUR DEVICE / YOUR EVIDENCE</p><h2>這支手機的結果</h2></div><button id="export" disabled>下載 JSON 報告</button></div><div class="table-scroll"><table><thead><tr><th>來源 / 數量</th><th>FPS</th><th>P95</th><th>&gt;33.3ms</th><th>GPU 平均</th><th>模擬速度</th></tr></thead><tbody id="rows"><tr><td colspan="6">尚未記錄。先選數量，再開始比較。</td></tr></tbody></table></div><p class="hint">模擬速度 100% 表示時間正常前進；低於 100% 代表即時流體正在放慢，不能只看 FPS。</p></section>
+<section class="results" id="resultsSection"><div class="results-head"><div><p class="eyebrow">YOUR DEVICE / YOUR EVIDENCE</p><h2>這支手機的結果</h2></div><button id="export" disabled>下載 JSON 報告</button></div><div id="assessment" class="assessment-card" data-status="waiting" aria-live="polite" aria-atomic="true">
+<p class="eyebrow">AUTOMATIC SCREENING / 自動判定</p><h3 id="verdictTitle">測完後，自動告訴你怎麼選</h3>
+<p id="verdictScope">只判斷本次實測設定，不推算其他火焰數量或整台手機的能力。</p>
+<div id="modeVerdicts"></div><p id="verdictDetail">選好火焰數量與畫質，按「比較兩種模式」。</p>
+<ul id="verdictNotes"></ul><p class="verdict-next" id="verdictNext">建議先用 4 個火焰、200 px、1×、柔光開啟。</p>
+</div>
+<label for="visualQuality">畫質確認（可選，會更新推薦）</label><select id="visualQuality" disabled><option value="pending">尚未確認 · 先看性能建議</option><option value="both">兩種畫質都能接受</option><option value="baked">只接受烘焙動畫的畫質</option><option value="live">只接受即時模擬的畫質</option><option value="neither">兩種畫質都不滿意</option></select>
+<p class="hint">頁面能量測性能，不能替你判斷火舌是否自然或循環接縫是否可接受。只測一種模式，或中途停止，不會冒充完整 A/B 結論。</p>
+<div class="table-scroll"><table><thead><tr><th>來源 / 數量</th><th>FPS</th><th>P95</th><th>&gt;33.3ms</th><th>GPU 平均</th><th>模擬速度</th><th>本段判定</th></tr></thead><tbody id="rows"><tr><td colspan="7">尚未記錄。先選數量，再開始比較。</td></tr></tbody></table></div><p class="hint">模擬速度 100% 表示時間正常前進；低於 100% 代表即時流體正在放慢，不能只看 FPS。</p></section>
+<details class="standards"><summary>達標標準與推薦依據</summary><div class="notes">
+<p>以下是這次火焰實驗的初篩門檻，不是手機認證，也不代表完整遊戲已達標。先固定 200 px、1×、柔光開啟、均勻分佈，再依序測 4、16、32 個。</p>
+<div class="table-scroll"><table><thead><tr><th>項目</th><th>60 FPS 檔</th><th>30 FPS 檔候選</th></tr></thead><tbody>
+<tr><td>平均 FPS</td><td>≥58</td><td>≥29</td></tr><tr><td>P95 幀間隔</td><td>≤20 ms</td><td>≤40 ms</td></tr><tr><td>超過 33.3 ms 的幀</td><td>&lt;1%</td><td>不作此檔門檻</td></tr><tr><td>即時模擬速度</td><td>≥95%</td><td>≥95%</td></tr></tbody></table></div>
+<p>同一模式的兩段都要通過，取較差檔位。20／60 秒只屬快速初篩。180 秒長測另外要求前 1/3、後 1/3 仍達標；後段或後一次同模式記錄的 FPS 下降超過 10%，會標記「持續性未通過」。10% 是本頁的掉速提醒線，不是發熱診斷。</p>
+<p>推薦先比較可用性、達標檔位、持續性與你確認的畫質。兩者同檔時，裝飾性火焰預設優先烘焙；若即時模式有一致、充分的 GPU 優勢，才改推即時。GPU 優勢要求兩段皆至少低 20%、平均差至少 0.2 ms，各段 FPS 差異不超過 5%，且計時覆蓋至少 80% 的幀、沒有 disjoint 標記。GPU 計時不支援時，仍可用 FPS 與幀時間初篩，不推斷 GPU 優勢或電量差異。</p>
+<p>建議若僅達 30 FPS 檔，代表可考慮低畫質方案；此頁沒有自動鎖定 30 FPS。修改數量、解析度或排列後，須重新測試。手機固定亮度、關閉省電模式、盡量不要邊充電邊測；長測前勿已處於高溫狀態。</p>
+</div></details>
 <details><summary>這個比較測了什麼？</summary><div class="notes"><p>即時模式：64×128 速度網格、128×256 狀態、20 次壓力迭代、30 Hz 更新。無論顯示幾團火，都只有一套流體求解。</p><p>烘焙模式：同一套流體預先輸出 30 FPS 的狀態序列，再用相同材質上色；沒有背景流體計算。循環接縫使用 0.5 秒混合，會有些許形態變化。所有火焰同步，避免把動畫錯相造成的差異混進比較。</p><p>兩種模式共用相同渲染路徑與柔光。不是原 v3 高畫質檔，也不是完整遊戲效能。透明重疊、顯示面積與畫布解析度都影響結果。GPU 計時不受支援時顯示「不支援」，不以 CPU 時間代替。</p><p id="memory">烘焙圖集約占 16 MiB GPU 紋理空間；這不是網頁總記憶體。切換時兩種資源會保留以免重新下載／編譯，但烘焙模式完全停止流體更新。</p><p>報告只在本機產生，不會自動上傳。若裝置不支援浮點渲染，可單獨測試烘焙模式。分頁切至背景、調整視窗或變更設定會中止當段，避免把不完整資料當成成績。</p><p><a href="README.md">實作、來源與測試邊界</a></p></div></details>
 <footer>EMBER / 一次看畫質，一次看成本。 <span>實機測量，不預設答案。</span></footer>
 </main><script type="module" src="app.js"></script></body></html>

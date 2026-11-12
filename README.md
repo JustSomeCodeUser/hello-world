@@ -36,6 +36,8 @@ Order balancing does not eliminate thermal throttling. Compare like-for-like set
 
 - `index.html`, `style.css`: Chinese touch-friendly controls and results.
 - `app.js`: lifecycle, mode selection, benchmarks, JSON export.
+- `assessment.js`: pure screening and recommendation logic; `assessment-ui.js`: accessible result cards.
+- `assessment.test.mjs`: boundary, incomplete-data, slowdown, visual-veto and recommendation tests (`node --test assessment.test.mjs`). Synthetic fixtures are for logic verification, not phone performance claims.
 - `fluid.js`: adapted EMBER simulator, allocated only on first live use.
 - `graphics.js`: common appearance shader, instanced display, shared optional glow, baking helper.
 - `flame-atlas.png`, `atlas.json`: baked state sequence and provenance/encoding manifest.
@@ -49,3 +51,15 @@ The original pressure/projection/transport/reaction kernels are retained; the si
 ## Scope
 
 This is an isolated visual/performance experiment. It does not modify or integrate into any game. A browser smoke test is bounded implementation evidence; actual low-end phone quality and performance remain for the device trial.
+
+## Automatic screening (report schema v2)
+
+These are task-specific screening thresholds, not certification. The 60 FPS tier requires average FPS >=58, P95 <=20ms and fewer than 1% of frames >33.333ms. The 30 FPS candidate tier requires average FPS >=29 and P95 <=40ms; slow-frame percentage is not a criterion at that boundary. Live mode additionally requires simulation/wall time >=95%. Missing/invalid timing or interrupted/too-short recordings cannot pass.
+
+20/60-second recordings give preliminary results. 180-second recordings also check the first and last third by elapsed frame time, including per-frame simulation step counts. Both windows must meet their tier. More than 10% FPS decline within a long segment, or between repeated same-mode segments, triggers a stability warning and prevents recommendation of that mode. This is a heuristic change warning, not a measured device temperature diagnosis.
+
+Each comparison is an explicit batch. All four planned segments must finish, with two segments per mode and identical count, size, layout, render scale, glow, canvas dimensions and segment duration. Recommendation uses the worse result per mode, never mixes batches, and displays its exact tested scope. A single-mode recording gets a grade but no comparative recommendation, except when live rendering is unsupported and a valid baked test passes.
+
+Eligible higher tiers take priority. At equal tiers, decorative flames default to baked to avoid live solving; that is a usage recommendation, not measured battery savings. A measured GPU advantage can select either mode with reliable GPU timing (>=80% coverage, no disjoint flag), comparable display cadence (all segment FPS within 5%), and both preferred-mode GPU means at least 20% below both other-mode means, with a mean difference >=0.2ms. Without reliable GPU timing, the frame-time criteria still work.
+
+Visual quality is not machine-graded. An optional visual choice can veto a recommendation. Pending quality is marked explicitly. Both rejected, both failing, unstable, mismatched or incomplete cases never produce a false all-clear. Reports export the rule version, per-segment grades, per-batch recommendation, reasons, scope and visual choice.
