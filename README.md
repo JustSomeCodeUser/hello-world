@@ -14,11 +14,11 @@ Open the HTTP URL in a WebGL2 browser. HTTPS is preferable on a phone (screen wa
 
 ## Comparison contract
 
-- Both modes: same material, 128×256 appearance surface, fixed instance size, same placement, same optional glow, 30 Hz source changes, no temporal interpolation. Changing the count does not shrink each flame. Overlap and render resolution are explicit controls.
+- Both modes: same source material baked offline or evaluated live, 128×256 appearance surface, fixed instance size, same placement, same optional glow, 30 Hz source changes, no temporal interpolation. Changing the count does not shrink each flame. Overlap and render resolution are explicit controls.
 - Live: exactly one 64×128 staggered velocity grid, 128×256 RGBA16F state field, limited MacCormack scalar transport, 20 pressure iterations, dt=1/30, seed 21. All instances share it. This is a mobile experiment, not the original v3 reference preset.
-- Baked: the same simulator was warmed for 6 simulated seconds, then 120 state frames were captured. Temperature/2, soot, and gas/2 are stored in opaque RGB8; fuel is unnecessary for display. No color-space conversion. The same material turns these into visible fire/smoke on the phone. This is a baked **state animation**, not a fully shaded sprite sheet; material shading is still shared once per display frame in both modes.
+- Baked: the same simulator was warmed for 6 simulated seconds, then 120 state frames were captured. The original RGB8 state sequence was rendered through the unchanged material into final RGBA8 appearance frames. RGB values are rounded to steps of 6/255 and alpha to steps of 16/255, clamped to 0..255, without dithering. These quantized pixels are packed into opaque color/opacity planes and stored losslessly in WebP. This is now a fully shaded sprite sheet: baked playback samples one frame, while live still computes its material. Composition and glow remain shared. The overall conversion is lossy; WebP lossless does not undo the preceding quantization.
 - The final 15 frames crossfade to the initial 15; the delivered loop has 105 frames / 3.5 seconds, with a 0.5-second seam blend. Quantization and seam blending are the intentional baked-quality differences. It is not a mathematically periodic fluid solution.
-- The atlas is 2048×2048 RGBA8 (~16 MiB GPU storage, no mipmaps), regardless of PNG download size. Memory for browser decoding, framebuffers and the simulator is additional. Once initialized, both mode resources remain resident for instant switching; baked mode executes **zero fluid steps**.
+- The atlas is 2048×1792 RGBA8 (14 MiB GPU storage, no mipmaps), regardless of WebP download size. Only the empty bottom atlas row was removed; each animation frame remains 128×256. Memory for browser decoding, framebuffers and the simulator is additional. Once initialized, both mode resources remain resident for instant switching; baked mode executes **zero fluid steps**.
 - All instances intentionally move in sync, in both modes. This comparison does not hide repetition with phase offsets.
 - No 3D combustion, ray marching, independent flame interaction, or integrated game workload is represented.
 
@@ -40,8 +40,9 @@ Order balancing does not eliminate thermal throttling. Compare like-for-like set
 - `assessment.test.mjs`: boundary, incomplete-data, slowdown, visual-veto and recommendation tests (`node --test assessment.test.mjs`). Synthetic fixtures are for logic verification, not phone performance claims.
 - `sweep.js`, `sweep.test.mjs`: automatic count plans, capacity selection, consistency checks and tests (`node --test assessment.test.mjs sweep.test.mjs`).
 - `fluid.js`: adapted EMBER simulator, allocated only on first live use.
-- `graphics.js`: common appearance shader, instanced display, shared optional glow, baking helper.
-- `flame-atlas.png`, `atlas.json`: baked state sequence and provenance/encoding manifest.
+- `graphics.js`: baked appearance sampling/live material, instanced display, shared optional glow, baking helpers.
+- `flame-atlas.webp`, `atlas.json`: final appearance sequence and provenance/encoding manifest.
+- `asset.js`, `asset.test.mjs`: explicit format, dimension and decimal 500 KB download checks; tests also verify the shipped asset SHA-256.
 
 ## Provenance
 
@@ -76,3 +77,17 @@ Each count is graded by the existing batch rules. The summary lists per-mode hig
 A lower count failing and a higher count passing at the same tier is a non-monotonic result. That mode/tier's trusted capacity is withheld as inconsistent; observed individual passes remain visible. No interpolation is made between the tested counts. 64 passing means 64 is the highest tested passing count, not that the device's physical limit is 64. If all four fail, fewer than 4 remain untested.
 
 All sweep recommendations are preliminary. Six-plus minutes across different loads is not 180 seconds of sustained validation at the chosen configuration. Use the recommended count and mode in a separate 180-second-per-segment test before game integration. Reports include the exact plan, four per-count assessments, both modes' tier capacities and the recommended mode/count/tier.
+
+## Compact baked asset (build 2026-11-13.4)
+
+The delivered atlas is **497,502 bytes (497.502 KB)**, down **81.25%** from the previous 2,653,137-byte PNG. The compact manifest is 767 bytes (LF); atlas plus manifest total **498,269 bytes**, below a strict 500,000-byte budget. Application code and HTML/CSS are additional. One shared atlas serves all 1–64 instances; its download does not multiply with flame count. A smaller download does not imply a proportional GPU-memory reduction.
+
+All 105 frames, 30 FPS, 3.5-second loop and 128×256 frame resolution are retained. Only color/alpha precision changes: RGB maximum rounding error is 3/255 per channel, alpha 8/255. Smoke gradients and thin tongues should be checked on the phone, especially with glow disabled. The original 0.5-second state seam blend remains. A live flame is continuously evolving and does not show an identical frame at the same wall time.
+
+Reproduction: shade the original state atlas (SHA-256 in `atlas.json`) at `(i + 0.01) / 30` seconds, read the 128×256 appearance framebuffer as RGBA8 for i=0..104, and pack bottom-up tile rows in 16 columns by 7 rows without image flipping. Round each RGB channel to the nearest multiple of 6, alpha to the nearest multiple of 16 and clamp to 0..255. Pack the color RGB plane above the alpha-as-gray RGB plane into a fully opaque 2048×3584 image. Encode with Pillow 10.2 WebP `lossless=True, quality=100, method=6, exact=True`. There is no dithering or frame removal. The former atlas remains in commit cb23b3eeb3737a2c092ba8a6253caec8d8f92f57; it is not bundled or fetched by the current page.
+
+Pixels are artistic emission plus absorption: RGB may exceed alpha. A direct transparent WebP changed low-alpha RGB values in desktop WebKit even with `premultiplyAlpha: 'none'`. To avoid that rounding, the delivered image is fully opaque: top 2048×1792 stores RGB; bottom stores alpha replicated as gray RGB. `decodeAtlas` reads both opaque planes through a temporary 2D canvas and reconstructs one RGBA byte array once before upload. No canvas operations occur during animation. The bitmap/canvas are released afterward; decoding has additional temporary memory/CPU costs outside the benchmark. Do not premultiply the reconstructed bytes or apply standard straight-alpha compositing. The renderer retains ONE / ONE_MINUS_SRC_ALPHA blending. Within each tile, half-texel clamping prevents neighboring-frame bleed.
+
+Offline comparison across all 105 frames against the pre-compression appearance, after compositing active fire/smoke pixels (reference max RGB >10), measured mean absolute 8-bit channel error 1.46 on dark [7,9,8] and 1.76 on gray [110,110,110]. These are image-difference measurements, not visual acceptance or phone performance. Dark-background P95 channel error was 3.11/255; gray was 5.02/255.
+
+Run all checks with `node --test assessment.test.mjs sweep.test.mjs asset.test.mjs`. The page checks actual fetched image bytes and decoded dimensions before enabling playback, shows the measured budget status, and includes asset bytes/GPU allocation separately in exported reports. All existing single-count and 4/16/32/64 sweep rules remain unchanged.

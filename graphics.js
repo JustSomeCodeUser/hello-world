@@ -11,10 +11,10 @@ precision highp float;in vec2 uv;out vec4 color;`;
 export function createRenderer(gl){
  const vao=gl.createVertexArray();gl.bindVertexArray(vao);
  const material=makeProgram(gl,prefix+`
-uniform sampler2D state;uniform int baked;uniform vec2 frames;uniform float blend;
-vec3 sampleFrame(float i){vec2 tile=vec2(mod(i,16.),floor(i/16.));vec2 p=tile*vec2(128.,256.)+clamp(uv*vec2(128.,256.),vec2(.5),vec2(127.5,255.5));return texture(state,p/2048.).rgb*vec3(2.,1.,2.);}
+uniform sampler2D state;uniform int baked;uniform float frame;uniform vec2 atlasSize;uniform vec2 tileSize;uniform float columns;
+vec4 sampleFrame(float i){vec2 tile=vec2(mod(i,columns),floor(i/columns));vec2 p=tile*tileSize+clamp(uv*tileSize,vec2(.5),tileSize-vec2(.5));return texture(state,p/atlasSize);}
 float aces(float x){return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.);}
-void main(){vec3 d;if(baked==1)d=mix(sampleFrame(frames.x),sampleFrame(frames.y),blend);else{vec4 v=texture(state,uv);d=vec3(v.r,v.g,v.a);}
+void main(){if(baked==1){color=sampleFrame(frame);return;}vec4 v=texture(state,uv);vec3 d=vec3(v.r,v.g,v.a);
 float T=d.x,S=d.y,D=d.z;float edge=smoothstep(0.,.02,uv.x)*smoothstep(0.,.02,1.-uv.x)*smoothstep(0.,.04,1.-uv.y);
 vec3 fire=mix(mix(vec3(1.,.055,.001),vec3(1.,.32,.014),smoothstep(.25,.72,T)),vec3(1.,.79,.32),smoothstep(.72,1.6,T));
 float emission=pow(max(T-.23,0.),2.45)*7.*smoothstep(.005,.07,D);float intensity=aces(emission*.8);
@@ -38,12 +38,13 @@ void main(){vec2 corners[6]=vec2[6](vec2(0,0),vec2(1,0),vec2(0,1),vec2(0,1),vec2
  function resize(w,h){if(scene?.w===w&&scene?.h===h)return;[scene,blurA,blurB].forEach(t=>deleteTarget(gl,t));scene=makeTarget(gl,w,h);blurA=makeTarget(gl,Math.max(1,w>>2),Math.max(1,h>>2));blurB=makeTarget(gl,blurA.w,blurA.h);}
  function render(source,mode,time,manifest,settings,cssSize){
   resize(gl.canvas.width,gl.canvas.height);bindTarget(appearance);gl.useProgram(material);texture(material,'state',source);gl.uniform1i(gl.getUniformLocation(material,'baked'),mode==='baked'?1:0);
-  const f=(time*manifest.fps)%manifest.frames;gl.uniform2f(gl.getUniformLocation(material,'frames'),Math.floor(f),(Math.floor(f)+1)%manifest.frames);gl.uniform1f(gl.getUniformLocation(material,'blend'),0);gl.drawArrays(gl.TRIANGLES,0,3);
+  const f=(time*manifest.fps)%manifest.frames;gl.uniform1f(gl.getUniformLocation(material,'frame'),Math.floor(f));gl.uniform2f(gl.getUniformLocation(material,'atlasSize'),manifest.atlasWidth||2048,manifest.atlasHeight||1792);gl.uniform2f(gl.getUniformLocation(material,'tileSize'),128,256);gl.uniform1f(gl.getUniformLocation(material,'columns'),manifest.columns||16);gl.drawArrays(gl.TRIANGLES,0,3);
   bindTarget(scene);gl.useProgram(background);gl.uniform2f(gl.getUniformLocation(background,'pixels'),...cssSize);gl.drawArrays(gl.TRIANGLES,0,3);
   gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(sprites);texture(sprites,'source',appearance.texture);gl.uniform2f(gl.getUniformLocation(sprites,'resolution'),...cssSize);gl.uniform1f(gl.getUniformLocation(sprites,'size'),settings.size);gl.uniform1i(gl.getUniformLocation(sprites,'count'),settings.count);gl.uniform1i(gl.getUniformLocation(sprites,'overlap'),settings.layout==='overlap'?1:0);gl.drawArraysInstanced(gl.TRIANGLES,0,6,settings.count);
   if(settings.glow==='on'){bindTarget(blurA);gl.useProgram(blur);texture(blur,'source',scene.texture);gl.uniform2f(gl.getUniformLocation(blur,'direction'),1/blurA.w,0);gl.drawArrays(gl.TRIANGLES,0,3);bindTarget(blurB);texture(blur,'source',blurA.texture);gl.uniform2f(gl.getUniformLocation(blur,'direction'),0,1/blurB.h);gl.drawArrays(gl.TRIANGLES,0,3);}
   bindTarget(null);gl.useProgram(final);texture(final,'source',scene.texture);texture(final,'glow',blurB.texture,1);gl.uniform1i(gl.getUniformLocation(final,'enabled'),settings.glow==='on'?1:0);gl.drawArrays(gl.TRIANGLES,0,3);
  }
  function packState(source){bindTarget(packed);gl.useProgram(pack);texture(pack,'source',source);gl.drawArrays(gl.TRIANGLES,0,3);const a=new Uint8Array(128*256*4);gl.readPixels(0,0,128,256,gl.RGBA,gl.UNSIGNED_BYTE,a);return a;}
- return {render,packState};
+ function readAppearance(){const a=new Uint8Array(128*256*4);gl.bindFramebuffer(gl.FRAMEBUFFER,appearance.fb);gl.readPixels(0,0,128,256,gl.RGBA,gl.UNSIGNED_BYTE,a);return a;}
+ return {render,packState,readAppearance};
 }

@@ -5,7 +5,8 @@
 <section class="workspace">
 <div class="visual"><div class="source-controls"><div class="section-label"><b>01</b> 動畫來源</div>
 <div class="mode-switch" role="group" aria-label="動畫來源"><button id="baked" aria-pressed="true" disabled><strong>烘焙動畫</strong><small>播放預先計算的序列</small></button><button id="live" aria-pressed="false" disabled><strong>共用即時模擬</strong><small>所有火焰共用 1 套流體</small></button></div>
-<p id="modeNote" class="hint">兩種模式使用相同火焰來源、著色、尺寸與更新頻率。</p>
+<p id="modeNote" class="hint">兩種模式使用相同火焰來源、尺寸與更新頻率。烘焙版預先完成上色。</p>
+<div class="asset-budget"><strong id="assetBadge">烘焙素材預算 ≤500 KB · 載入驗證中</strong><p id="assetDetail">保留 128×256、105 幀、30 FPS；500 KB 是下載大小，不是 GPU 記憶體。</p></div>
 </div><div class="stage" id="stage"><canvas id="canvas" aria-label="火焰效能測試畫面"></canvas><div class="stage-top"><span id="modeTag">準備素材中</span><span id="countTag">04 FLAMES</span></div><div class="stage-bottom"><span id="sceneTag">均勻分佈 · 固定尺寸</span><button id="pause" aria-label="暫停動畫">暫停</button></div><div id="error" role="alert" hidden></div></div>
 <div class="metrics"><div><small>畫面更新</small><strong id="fps">—</strong><span>FPS</span></div><div><small>較慢的幀 · P95</small><strong id="p95">—</strong><span>ms</span></div><div><small>GPU · 平均</small><strong id="gpu">—</strong><span id="gpuUnit">ms / 幀</span></div></div>
 <p class="caption" id="detail">正在載入預烘焙序列；首次載入不計入測試。</p></div>
@@ -37,6 +38,6 @@
 <p>推薦先比較可用性、達標檔位、持續性與你確認的畫質。兩者同檔時，裝飾性火焰預設優先烘焙；若即時模式有一致、充分的 GPU 優勢，才改推即時。GPU 優勢要求兩段皆至少低 20%、平均差至少 0.2 ms，各段 FPS 差異不超過 5%，且計時覆蓋至少 80% 的幀、沒有 disjoint 標記。GPU 計時不支援時，仍可用 FPS 與幀時間初篩，不推斷 GPU 優勢或電量差異。</p>
 <p>建議若僅達 30 FPS 檔，代表可考慮低畫質方案；此頁沒有自動鎖定 30 FPS。修改數量、解析度或排列後，須重新測試。手機固定亮度、關閉省電模式、盡量不要邊充電邊測；長測前勿已處於高溫狀態。</p>
 </div></details>
-<details><summary>這個比較測了什麼？</summary><div class="notes"><p>即時模式：64×128 速度網格、128×256 狀態、20 次壓力迭代、30 Hz 更新。無論顯示幾團火，都只有一套流體求解。</p><p>烘焙模式：同一套流體預先輸出 30 FPS 的狀態序列，再用相同材質上色；沒有背景流體計算。循環接縫使用 0.5 秒混合，會有些許形態變化。所有火焰同步，避免把動畫錯相造成的差異混進比較。</p><p>兩種模式共用相同渲染路徑與柔光。不是原 v3 高畫質檔，也不是完整遊戲效能。透明重疊、顯示面積與畫布解析度都影響結果。GPU 計時不受支援時顯示「不支援」，不以 CPU 時間代替。</p><p id="memory">烘焙圖集約占 16 MiB GPU 紋理空間；這不是網頁總記憶體。切換時兩種資源會保留以免重新下載／編譯，但烘焙模式完全停止流體更新。</p><p>報告只在本機產生，不會自動上傳。若裝置不支援浮點渲染，可單獨測試烘焙模式。分頁切至背景、調整視窗或變更設定會中止當段，避免把不完整資料當成成績。</p><p><a href="README.md">實作、來源與測試邊界</a></p></div></details>
+<details><summary>這個比較測了什麼？</summary><div class="notes"><p>即時模式：64×128 速度網格、128×256 狀態、20 次壓力迭代、30 Hz 更新。無論顯示幾團火，都只有一套流體求解。</p><p>烘焙模式：同一套流體與材質預先輸出 30 FPS 的最終畫面，再減少色階並壓縮儲存；下載不超過 500 KB，沒有背景流體計算。細火舌、暗煙及漸層可能有量化痕跡。循環接縫使用 0.5 秒混合，會有些許形態變化。所有火焰同步，避免把動畫錯相造成的差異混進比較。</p><p>兩種模式共用相同合成與柔光；烘焙已預先上色，即時模式仍需現場模擬和上色。不是原 v3 高畫質檔，也不是完整遊戲效能。透明重疊、顯示面積與畫布解析度都影響結果。GPU 計時不受支援時顯示「不支援」，不以 CPU 時間代替。</p><p id="memory">下載量與 GPU 紋理空間分開計算；這不是網頁總記憶體。切換時兩種資源會保留以免重新下載／編譯，但烘焙模式完全停止流體更新。</p><p>報告只在本機產生，不會自動上傳。若裝置不支援浮點渲染，可單獨測試烘焙模式。分頁切至背景、調整視窗或變更設定會中止當段，避免把不完整資料當成成績。</p><p><a href="README.md">實作、來源與測試邊界</a></p></div></details>
 <footer>EMBER / 一次看畫質，一次看成本。 <span>實機測量，不預設答案。</span></footer>
 </main><script type="module" src="app.js"></script></body></html>
